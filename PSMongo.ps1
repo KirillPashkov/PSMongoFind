@@ -5,7 +5,6 @@
     --------------------------------------------------------------------------------
 #>
 
-
 #region Source: Startup.pss
 #----------------------------------------------
 #region Import Assemblies
@@ -320,6 +319,10 @@ function Call-MainForm_psf
 						[MongoDB.Bson.BsonDocument]$query = [MongoDB.Driver.Builders.Query]::LTE($global:QEKey, $queryelement)
 						break
 					}
+					'Matches'{
+						[MongoDB.Bson.BsonDocument]$query = [MongoDB.Driver.Builders.Query]::Matches($global:QEKey, $global:QEValue)
+						break
+					}
 				}
 			}
 			else
@@ -329,10 +332,16 @@ function Call-MainForm_psf
 				foreach ($item in $listboxCondition.Items)
 				{
 					Get-QueryElements -FilterElement $item
-					
-					$sbfilter.Append($("[MongoDB.Driver.Builders.Query]::{0}('{1}'," -f $global:QEComparisonOperator, $global:QEKey))
-					$sbfilter.Append($("{0}::Create('{1}')" -f $global:QEDataType, $global:QEValue))
-					$sbfilter.Append(')')
+					if ($global:QEComparisonOperator -ne 'Matches')
+					{
+						$sbfilter.Append($("[MongoDB.Driver.Builders.Query]::{0}('{1}'," -f $global:QEComparisonOperator, $global:QEKey))
+						$sbfilter.Append($("{0}::Create('{1}')" -f $global:QEDataType, $global:QEValue))
+						$sbfilter.Append(')')
+					}
+					else
+					{
+						$sbfilter.Append($("[MongoDB.Driver.Builders.Query]::{0}('{1}','{2}')" -f $global:QEComparisonOperator, $global:QEKey, $global:QEValue))
+					}
 					$i++
 					
 					if ($i -lt $total)
@@ -719,7 +728,7 @@ AACAAAAAgAAAAA==')
 	[void]$contextmenustripCondition.Items.Add($removeAllToolStripMenuItem)
 	$contextmenustripCondition.Name = "contextmenustripCondition"
 	$contextmenustripCondition.ShowImageMargin = $False
-	$contextmenustripCondition.Size = '139, 48'
+	$contextmenustripCondition.Size = '139, 26'
 	$contextmenustripCondition.add_Opening($contextmenustripCondition_Opening)
 	#
 	# deleteDelToolStripMenuItem
@@ -769,6 +778,7 @@ AACAAAAAgAAAAA==')
 	$global:ComparisonOperator['>='] = 'GTE'
 	$global:ComparisonOperator['<'] = 'LT'
 	$global:ComparisonOperator['<='] = 'LTE'
+	$global:ComparisonOperator['LIKE'] = 'Matches'
 	
 	function New-Xml
 	{
@@ -958,6 +968,7 @@ AACAAAAAgAAAAA==')
 		else { $hostname = $xml.PSMongo.Connection.Host }
 		if ([System.String]::IsNullOrEmpty($xml.PSMongo.Connection.Port)) { $port = '27017' }
 		else { $port = $xml.PSMongo.Connection.Port }
+		
 		$global:XMLOption = New-Object System.Collections.Specialized.OrderedDictionary
 		$xml.PSMongo.Option | Get-Member -MemberType Property | Select -ExpandProperty Name | ForEach-Object {
 			$key = $_
